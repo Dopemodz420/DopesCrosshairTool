@@ -1,0 +1,32 @@
+#include <windows.h>
+
+101 ICON "app.ico"
+
+// Version info — v1.0.2
+1 VERSIONINFO
+FILEVERSION 1,0,2,0
+PRODUCTVERSION 1,0,2,0
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "DopesAIDevelopment"
+            VALUE "FileDescription", "Dopes Crosshair Tool - Crosshair HUD Overlay v1.0.2"
+            VALUE "FileVersion", "1.0.2"
+            VALUE "ProductName", "DopesCrosshairTool"
+            VALUE "ProductVersion", "1.0.2"
+            VALUE "LegalCopyright", "Copyright (c) 2026"
+            VALUE "OriginalFilename", "DopesCrosshairTool.exe"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0
+    END
+END

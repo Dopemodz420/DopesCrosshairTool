@@ -1,0 +1,202 @@
+# DOPES CROSSHAIR
+
+## END USER LICENSE AGREEMENT (EULA)
+
+**Last Updated:** August 29, 2026
+
+**Creator / Licensor:** Dopemodz420
+**Product:** Dopes Crosshair
+
+---
+
+### 1. ACCEPTANCE OF TERMS
+
+By downloading, installing, accessing, purchasing, or using **Dopes Crosshair** ("Software"), you acknowledge that you have read, understood, and agree to be bound by this End User License Agreement ("Agreement").
+
+If you do not agree to these terms, you must not download, install, access, or use the Software.
+
+---
+
+### 2. LICENSE GRANT
+
+Dopemodz420 ("Licensor") grants you a limited, personal, non-exclusive, non-transferable, and revocable license to use Dopes Crosshair ("Software") for your personal use, subject to the terms of this Agreement.
+
+This Agreement grants you a license to use the Software. It does **not** transfer ownership or intellectual property rights in the Software to you.
+
+---
+
+### 3. OWNERSHIP AND INTELLECTUAL PROPERTY
+
+Dopes Crosshair, including but not limited to its software, executable files, source code, graphics, logos, designs, interfaces, documentation, configuration files, and other associated materials, remains the exclusive property of **Dopemodz420**, unless otherwise expressly stated in writing.
+
+All rights, title, and interest in the Software not expressly granted under this Agreement are reserved by the Licensor.
+
+You may not claim ownership of, register, reproduce, or otherwise represent the Software or any portion of it as your own work.
+
+---
+
+### 4. PROHIBITED USE
+
+You agree that you will **not**, directly or indirectly:
+
+1. **Resell** the Software, licenses, accounts, keys, files, or any portion of the Software to another person or entity.
+2. **Redistribute** the Software or any portion of it to any third party without written authorization from Dopemodz420.
+3. Upload, mirror, host, share, or distribute the Software through unauthorized websites, file-sharing services, forums, Discord servers, torrents, social-media platforms, cloud-storage services, or other distribution channels.
+4. Give, lend, rent, lease, sublicense, transfer, or otherwise provide your licensed copy of the Software to another party.
+5. Copy, reproduce, duplicate, modify, repack, or recompile the Software for the purpose of redistribution.
+6. Remove, alter, obscure, or bypass copyright notices, licensing information, branding, or other ownership notices contained within the Software.
+7. Attempt to circumvent licensing, authentication, activation, or other access-control mechanisms implemented by the Software.
+8. Use the Software to create or distribute a competing product that substantially copies the Software's protected elements, branding, or proprietary materials.
+9. Represent yourself or another person as the creator, developer, distributor, or authorized representative of Dopes Crosshair without written permission.
+
+---
+
+### 5. PERSONAL LICENSE
+
+Unless expressly authorized in writing by Dopemodz420, each license is intended for the individual who obtained it.
+
+You may not transfer your license to another individual or entity.
+
+If the Software uses a license key, activation code, account, token, or other authentication mechanism, such credentials may not be shared with other individuals.
+
+---
+
+### 6. MODIFICATION AND REVERSE ENGINEERING
+
+To the maximum extent permitted by applicable law, you may not:
+
+* Reverse engineer the Software;
+* Decompile or disassemble the Software;
+* Attempt to extract proprietary source code;
+* Circumvent technical protections;
+* Modify the Software for the purpose of bypassing licensing or security features;
+* Create unauthorized derivative versions for distribution.
+
+Nothing in this section is intended to prohibit activities that cannot legally be restricted under applicable law.
+
+---
+
+### 7. THIRD-PARTY DISTRIBUTION
+
+No individual, group, website, reseller, community, organization, or other third party is authorized to distribute Dopes Crosshair unless expressly authorized in writing by Dopemodz420.
+
+Any unauthorized copy, upload, mirror, resale, or redistribution is prohibited.
+
+If you encounter an unauthorized distribution of Dopes Crosshair, you are encouraged to report it to the creator.
+
+---
+
+### 8. TERMINATION
+
+This Agreement and your license to use the Software may be terminated immediately if you violate any provision of this Agreement.
+
+Upon termination, you must:
+
+* Stop using the Software;
+* Delete all copies of the Software in your possession or control;
+* Cease distributing or making the Software available to others; and
+* Remove unauthorized copies from any location under your control.
+
+Termination does not limit any other rights or remedies available to the Licensor under applicable law.
+
+---
+
+### 9. UPDATES AND CHANGES
+
+Dopemodz420 may release updates, patches, improvements, or modifications to Dopes Crosshair at any time.
+
+The Licensor reserves the right to modify, suspend, discontinue, or change features of the Software at its discretion.
+
+Future versions or updates may be subject to additional or revised license terms.
+
+---
+
+### 10. NO WARRANTY
+
+To the maximum extent permitted by applicable law, Dopes Crosshair is provided **"AS IS"** and **"AS AVAILABLE."**
+
+Dopemodz420 makes no warranties, express or implied, regarding the Software, including but not limited to warranties of:
+
+* Merchantability;
+* Fitness for a particular purpose;
+* Availability;
+* Reliability;
+* Accuracy; or
+* Non-infringement.
+
+The Licensor does not guarantee that the Software will operate without interruption, errors, or defects.
+
+---
+
+### 11. LIMITATION OF LIABILITY
+
+To the maximum extent permitted by applicable law, Dopemodz420 shall not be liable for any indirect, incidental, consequential, special, exemplary, or punitive damages arising from or related to the use or inability to use Dopes Crosshair.
+
+You assume responsibility for your use of the Software and for complying with all applicable laws, rules, regulations, and third-party terms.
+
+---
+
+### 12. THIRD-PARTY SERVICES
+
+Dopes Crosshair may interact with or depend upon third-party software, operating systems, services, platforms, APIs, or other technologies.
+
+Dopemodz420 does not control and is not responsible for changes, interruptions, restrictions, or discontinuation of third-party services.
+
+Your use of third-party services remains subject to the applicable third party's terms and policies.
+
+---
+
+### 13. CONTACT AND AUTHORIZATION
+
+The official creator and licensor of Dopes Crosshair is:
+
+**Dopemodz420**
+
+For licensing questions, permissions, copyright concerns, redistribution reports, business inquiries, or requests for authorization, contact:
+
+**Creator:** Dopemodz420
+**Product:** Dopes Crosshair
+
+**Official Contact:**
+[dopemodz@gmail.com]
+
+**Official Website / Community:**
+[Discord - dopemodz420]
+
+Only written authorization from Dopemodz420 or an officially authorized representative constitutes permission to redistribute, resell, sublicense, or otherwise commercially distribute Dopes Crosshair.
+
+---
+
+### 14. COPYRIGHT AND ENFORCEMENT
+
+Unauthorized copying, resale, redistribution, or distribution of Dopes Crosshair may constitute a violation of applicable copyright, intellectual-property, contract, or other laws.
+
+Dopemodz420 reserves all rights and remedies available under applicable law against individuals or entities that violate this Agreement or infringe upon the Software's intellectual-property rights.
+
+---
+
+### 15. SEVERABILITY
+
+If any provision of this Agreement is determined to be invalid, illegal, or unenforceable, the remaining provisions shall remain in full force and effect to the maximum extent permitted by law.
+
+---
+
+### 16. ENTIRE AGREEMENT
+
+This Agreement constitutes the entire agreement between you and Dopemodz420 concerning your use of Dopes Crosshair and supersedes any prior agreements or understandings concerning the Software, except where otherwise expressly agreed in writing.
+
+---
+
+### 17. ACKNOWLEDGMENT
+
+By installing, accessing, or using Dopes Crosshair, you acknowledge that:
+
+* You have read this Agreement.
+* You understand its terms.
+* You agree to comply with its restrictions.
+* You understand that you are receiving a **license to use** the Software, not ownership of the Software.
+* You agree that you will **not resell, redistribute, share, or provide the Software to any unauthorized third party**.
+
+**© 2026 Dopemodz420. All Rights Reserved.**
+
+**Dopes Crosshair™**

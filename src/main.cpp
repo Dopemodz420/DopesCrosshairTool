@@ -289,6 +289,11 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         }
         return 0;
     case WM_HOTKEY:
+        if (wParam == 9002) { // F7 - toggle main window <-> tray (global, works even when hidden)
+            if (IsWindowVisible(hWnd)) HideToTray();
+            else ShowMainWindow();
+            return 0;
+        }
         if (wParam == 9001) { // F8 - no-lag toggle (RegisterHotKey)
             if (auto* cw = (ConfigWindow*)GetWindowLongPtrW(hWnd, GWLP_USERDATA)) {
                 AppConfig cfg = cw->GetConfig();
@@ -303,6 +308,7 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         break;
     case WM_DESTROY:
         UnregisterHotKey(hWnd, 9001);
+        UnregisterHotKey(hWnd, 9002);
         RemoveTrayIcon();
         PostQuitMessage(0);
         return 0;
@@ -405,7 +411,7 @@ int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmdLine, int)
     if (!wc.hIconSm) wc.hIconSm = wc.hIcon;
     RegisterClassExW(&wc);
 
-    HWND hwnd = CreateWindowExW(WS_EX_APPWINDOW, wc.lpszClassName, _T("Dopes Crosshair Tool  —  Crosshair HUD Overlay v1.0.2"), WS_POPUP | WS_MINIMIZEBOX, 100, 100, 1120, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    HWND hwnd = CreateWindowExW(WS_EX_APPWINDOW, wc.lpszClassName, _T("Dopes Crosshair Tool  —  Crosshair HUD Overlay v1.0.3"), WS_POPUP | WS_MINIMIZEBOX, 100, 100, 1120, 800, nullptr, nullptr, wc.hInstance, nullptr);
     if (!hwnd)
     {
         UnregisterClassW(wc.lpszClassName, wc.hInstance);
@@ -429,6 +435,8 @@ int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmdLine, int)
 
     // Hotkey: F8 global no-lag toggle (WM_HOTKEY path) — fixes polling lag when game has focus / vsync stalls
     RegisterHotKey(hwnd, 9001, 0, VK_F8);
+    // Hotkey: F7 global toggle main window <-> tray (works even when hidden, no relaunch needed)
+    RegisterHotKey(hwnd, 9002, 0, VK_F7);
 
     // Tray
     AddTrayIcon(hwnd);

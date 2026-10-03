@@ -19,12 +19,13 @@ public:
 
     // Render crosshair centered at (cx,cy) into a 32bpp bitmap DC of size w x h
     // Returns true if anything drawn
+    // fps<=0 disables FPS counter; fps>0 draws "NN FPS" at configured corner
     bool Render(HDC hdc, int w, int h, int cx, int cy, const CrosshairConfig& cfg);
-    bool Render(HDC hdc, int w, int h, int cx, int cy, const AppConfig& appCfg);
+    bool Render(HDC hdc, int w, int h, int cx, int cy, const AppConfig& appCfg, double fps = 0.0);
 
     // Render to layered window bitmap (creates temporary bitmap and calls UpdateLayeredWindow)
     bool RenderToLayeredWindow(HWND hwnd, const CrosshairConfig& cfg, POINT center);
-    bool RenderToLayeredWindow(HWND hwnd, const AppConfig& appCfg, POINT center);
+    bool RenderToLayeredWindow(HWND hwnd, const AppConfig& appCfg, POINT center, double fps = 0.0);
 
     // For preview: render into memory bitmap and return HBITMAP (caller deletes)
     HBITMAP RenderPreview(int w, int h, const CrosshairConfig& cfg);
@@ -36,6 +37,7 @@ private:
     bool DrawSvg(Gdiplus::Graphics& g, int cx, int cy, const CrosshairConfig& cfg, const AppConfig& appCfg);
     bool DrawCrosshairInternal(Gdiplus::Graphics& g, int cx, int cy, const AppConfig& appCfg);
     void ApplyLeanAndScale(Gdiplus::Graphics& g, int cx, int cy, const AppConfig& appCfg);
+    bool DrawFps(Gdiplus::Graphics& g, int w, int h, const AppConfig& appCfg, double fps);
 
     Gdiplus::GdiplusStartupInput m_gdiplusStartup{};
     ULONG_PTR m_token = 0;

@@ -157,6 +157,12 @@ struct AppConfig {
     std::wstring updateFeedUrl; // empty = DefaultUpdateFeedUrl()
     std::string skippedVersion; // user dismissed
 
+    // --- FPS counter (external overlay, no injection) ---
+    bool showFps = false;
+    int fpsCorner = 1; // 0=TopLeft 1=TopRight 2=BottomLeft 3=BottomRight
+    COLORREF fpsColor = RGB(0, 255, 128);
+    int fpsFontSize = 18;
+
     void SetDefaults();
     bool IsElevated() const;
     static std::wstring VkToString(int vk);

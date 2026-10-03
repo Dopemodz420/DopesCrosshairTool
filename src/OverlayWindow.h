@@ -79,6 +79,15 @@ private:
     POINT m_lastCenter{ -9999,-9999 };
     bool m_lastShouldShow = false;
 
+    // FPS counter (external, no injection — measures our overlay present rate)
+    LARGE_INTEGER m_fpsFreq{ 0 };
+    LARGE_INTEGER m_fpsWindowStart{ 0 };
+    int m_fpsFramesInWindow = 0;
+    double m_fpsValue = 0.0;
+    bool m_fpsInit = false;
+    void TickFps();
+    double GetFps() const { return m_fpsValue; }
+
     // Visibility hotkey state
     bool m_visPrevDown = false;
     bool m_visibilityToggled = true;

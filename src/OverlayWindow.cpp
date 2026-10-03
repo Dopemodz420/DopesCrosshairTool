@@ -276,8 +276,23 @@ void OverlayWindow::ForceRedraw() {
     Update();
 }
 
+void OverlayWindow::TickFps() {
+    if (!m_fpsInit) { QueryPerformanceFrequency(&m_fpsFreq); QueryPerformanceCounter(&m_fpsWindowStart); m_fpsInit = true; }
+    LARGE_INTEGER now{}; QueryPerformanceCounter(&now);
+    m_fpsFramesInWindow++;
+    double elapsed = (double)(now.QuadPart - m_fpsWindowStart.QuadPart) / (double)m_fpsFreq.QuadPart;
+    if (elapsed >= 0.5) {
+        double inst = (double)m_fpsFramesInWindow / elapsed;
+        // Smooth: EMA to avoid jitter
+        if (m_fpsValue <= 0.1) m_fpsValue = inst;
+        else m_fpsValue = m_fpsValue * 0.6 + inst * 0.4;
+        m_fpsFramesInWindow = 0;
+        m_fpsWindowStart = now;
+    }
+}
+
 bool OverlayWindow::DoRenderLayered(POINT center) {
-    return m_renderer.RenderToLayeredWindow(m_hwnd, m_cfg, center);
+    return m_renderer.RenderToLayeredWindow(m_hwnd, m_cfg, center, m_cfg.showFps ? m_fpsValue : 0.0);
 }
 bool OverlayWindow::DoRenderHardware(POINT center) {
     if (!IsHardwareAvailable()) return false;
@@ -293,45 +308,38 @@ bool OverlayWindow::DoRenderHardware(POINT center) {
     // For now: render via GDI directly to a memory bitmap then Map hardware staging if available
     // Simplified: use CrosshairRenderer::Render to get bits via DIB, then create a D3D11 texture and draw
     {
-        // Build a 32bpp DIB for current window size, centered at local pos
+        // Reuse persistent DIB + bits (fixes 2-5 min freeze from per-frame 8MB alloc + GDI churn)
         int vsX, vsY; // window origin
         RECT wr{}; GetWindowRect(m_hwnd, &wr); vsX = wr.left; vsY = wr.top;
         int localX = center.x - vsX;
         int localY = center.y - vsY;
-        // Create temp bitmap same size as backbuffer but we only draw crosshair near center
-        // Use D3D11_USAGE_DEFAULT texture updated via UpdateSubresource
-        std::vector<uint32_t> bits((size_t)m_hwW * m_hwH, 0);
-        // Quick GDI render to bits: create memory DC with DIB
-        HDC screenDC = GetDC(nullptr);
-        HDC memDC = CreateCompatibleDC(screenDC);
-        BITMAPINFO bmi{}; bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-        bmi.bmiHeader.biWidth = m_hwW; bmi.bmiHeader.biHeight = -m_hwH;
-        bmi.bmiHeader.biPlanes = 1; bmi.bmiHeader.biBitCount = 32; bmi.bmiHeader.biCompression = BI_RGB;
-        void* pBits = nullptr;
-        HBITMAP hBmp = CreateDIBSection(memDC, &bmi, DIB_RGB_COLORS, &pBits, nullptr, 0);
-        HBITMAP old = (HBITMAP)SelectObject(memDC, hBmp);
-        if (pBits) memset(pBits, 0, (size_t)m_hwW * m_hwH * 4);
-        // Render crosshair into memDC at localX,localY
-        m_renderer.Render(memDC, m_hwW, m_hwH, localX, localY, m_cfg);
-        if (pBits) memcpy(bits.data(), pBits, (size_t)m_hwW * m_hwH * 4);
-        SelectObject(memDC, old); DeleteObject(hBmp); DeleteDC(memDC); ReleaseDC(nullptr, screenDC);
+        EnsureHwCache(m_hwW, m_hwH);
+        if (!m_hwCacheDC || !m_hwCacheBits) return false;
+        if ((int)m_hwBits.size() != m_hwW * m_hwH) m_hwBits.assign((size_t)m_hwW * m_hwH, 0);
+        memset(m_hwCacheBits, 0, (size_t)m_hwW * m_hwH * 4);
+        // Render crosshair (+FPS) into persistent memDC
+        m_renderer.Render(m_hwCacheDC, m_hwW, m_hwH, localX, localY, m_cfg, m_cfg.showFps ? m_fpsValue : 0.0);
+        memcpy(m_hwBits.data(), m_hwCacheBits, (size_t)m_hwW * m_hwH * 4);
         // Upload bits to a temp D3D texture then copy to backbuffer
         D3D11_TEXTURE2D_DESC td{}; td.Width = m_hwW; td.Height = m_hwH; td.MipLevels = 1; td.ArraySize = 1;
         td.Format = DXGI_FORMAT_B8G8R8A8_UNORM; td.SampleDesc.Count = 1; td.Usage = D3D11_USAGE_DEFAULT;
         td.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        D3D11_SUBRESOURCE_DATA sd{}; sd.pSysMem = bits.data(); sd.SysMemPitch = m_hwW * 4;
+        D3D11_SUBRESOURCE_DATA sd{}; sd.pSysMem = m_hwBits.data(); sd.SysMemPitch = m_hwW * 4;
         ID3D11Texture2D* tmp = nullptr;
         HRESULT hr = m_hwDevice->CreateTexture2D(&td, &sd, &tmp);
         if (SUCCEEDED(hr) && tmp) {
             ID3D11Texture2D* back = nullptr; m_hwSwap->GetBuffer(0, IID_PPV_ARGS(&back));
-            m_hwCtx->CopyResource(back, tmp);
-            back->Release(); tmp->Release();
+            if (back) { m_hwCtx->CopyResource(back, tmp); back->Release(); }
+            tmp->Release();
+        } else {
+            return false;
         }
     }
     return true;
 }
 void OverlayWindow::DoRender(POINT center) {
     if (!m_hwnd) return;
+    TickFps();
     bool ok = false;
     if (m_useHardware) {
         // Ensure size matches current monitor rect

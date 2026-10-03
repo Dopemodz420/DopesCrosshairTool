@@ -150,6 +150,16 @@ private:
     bool m_checkingUpdate = false;
     void TriggerUpdateCheck(bool manual=false);
     void RenderUpdatePopup();
+    // One-click installer download state (polled each frame, set by worker thread)
+    bool m_updateDownloading = false;
+    bool m_updateDlDone = false;
+    bool m_updateDlOk = false;
+    bool m_updateLaunched = false;
+    std::string m_updateDlError;
+    std::wstring m_updateDlPath;
+    unsigned long long m_updateDlGot = 0;
+    unsigned long long m_updateDlTotal = 0;
+    void StartInstallerDownload();
     void RefreshLibrary();
     void EnsureLibraryThumbnails();
     std::wstring GetLibraryDir();

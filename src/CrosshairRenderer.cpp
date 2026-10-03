@@ -397,7 +397,47 @@ bool CrosshairRenderer::Render(HDC hdc, int w, int h, int cx, int cy, const Cros
     return DrawCrosshair(g, cx, cy, cfg);
 }
 
-bool CrosshairRenderer::Render(HDC hdc, int w, int h, int cx, int cy, const AppConfig& appCfg) {
+bool CrosshairRenderer::DrawFps(Gdiplus::Graphics& g, int w, int h, const AppConfig& appCfg, double fps) {
+    if (!appCfg.showFps) return false;
+    if (fps <= 0.1) fps = 0.0;
+    using namespace Gdiplus;
+    int fontSize = std::clamp(appCfg.fpsFontSize, 10, 48);
+    COLORREF c = appCfg.fpsColor;
+    // Format: "60 FPS" — external overlay measures its own present rate (no injection).
+    // This tracks the display/DWM present rate the crosshair is composited at, not the game's internal render loop.
+    wchar_t txt[32];
+    swprintf_s(txt, L"%d FPS", (int)std::round(fps));
+    FontFamily ff(L"Consolas");
+    const FontFamily* pff = &ff;
+    if (!ff.IsAvailable()) pff = FontFamily::GenericMonospace();
+    Gdiplus::Font font(pff, (REAL)fontSize, FontStyleBold, UnitPixel);
+    RectF layout(0, 0, 400, 100);
+    // Measure
+    RectF bounds;
+    g.MeasureString(txt, -1, &font, layout, &bounds);
+    float bw = bounds.Width + 16.0f;
+    float bh = bounds.Height + 10.0f;
+    const float margin = 12.0f;
+    float bx = margin, by = margin;
+    switch (appCfg.fpsCorner) {
+    case 0: bx = margin; by = margin; break; // TopLeft
+    case 1: bx = (float)w - bw - margin; by = margin; break; // TopRight
+    case 2: bx = margin; by = (float)h - bh - margin; break; // BottomLeft
+    case 3: bx = (float)w - bw - margin; by = (float)h - bh - margin; break; // BottomRight
+    default: bx = (float)w - bw - margin; by = margin; break;
+    }
+    SolidBrush bg(Color(140, 0, 0, 0));
+    g.FillRectangle(&bg, bx, by, bw, bh);
+    Pen border(ToGdiColor(c, 200), 1.0f);
+    // GDI+ DrawRectangle takes RectF
+    g.DrawRectangle(&border, RectF(bx, by, bw, bh));
+    SolidBrush brush(ToGdiColor(c, 255));
+    StringFormat sf; sf.SetAlignment(StringAlignmentCenter); sf.SetLineAlignment(StringAlignmentCenter);
+    g.DrawString(txt, -1, &font, RectF(bx, by, bw, bh), &sf, &brush);
+    return true;
+}
+
+bool CrosshairRenderer::Render(HDC hdc, int w, int h, int cx, int cy, const AppConfig& appCfg, double fps) {
     if (!m_inited) return false;
     using namespace Gdiplus;
     Graphics g(hdc);
@@ -420,11 +460,12 @@ bool CrosshairRenderer::Render(HDC hdc, int w, int h, int cx, int cy, const AppC
             } else {
                 ok = DrawPng(g, cx, cy, cfg);
             }
-            if (ok) { g.Restore(state); return true; }
+            if (ok) { g.Restore(state); DrawFps(g, w, h, appCfg, fps); return true; }
         }
     }
     ok = DrawCrosshair(g, cx, cy, cfg);
     g.Restore(state);
+    DrawFps(g, w, h, appCfg, fps);
     return ok;
 }
 
@@ -433,7 +474,7 @@ bool CrosshairRenderer::RenderToLayeredWindow(HWND hwnd, const CrosshairConfig& 
     return RenderToLayeredWindow(hwnd, tmp, center);
 }
 
-bool CrosshairRenderer::RenderToLayeredWindow(HWND hwnd, const AppConfig& appCfg, POINT center) {
+bool CrosshairRenderer::RenderToLayeredWindow(HWND hwnd, const AppConfig& appCfg, POINT center, double fps) {
     if (!hwnd) return false;
     int vsX, vsY, vsW, vsH;
     // RealOverlay vs Standard: choose monitor
@@ -476,7 +517,7 @@ bool CrosshairRenderer::RenderToLayeredWindow(HWND hwnd, const AppConfig& appCfg
     if (bits) memset(bits, 0, (size_t)vsW * vsH * 4);
     int localX = center.x - vsX;
     int localY = center.y - vsY;
-    bool ok = Render(memDC, vsW, vsH, localX, localY, appCfg);
+    bool ok = Render(memDC, vsW, vsH, localX, localY, appCfg, fps);
     POINT pPos{ vsX, vsY };
     SIZE pSize{ vsW, vsH };
     POINT pSrc{ 0,0 };

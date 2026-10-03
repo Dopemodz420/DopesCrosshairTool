@@ -663,9 +663,17 @@ void ConfigWindow::RefreshLibrary(){
             do{
                 if(fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
                 std::wstring full = dir + fd.cFileName;
-                std::wstring lowFull = utils::ToLower(full);
+                // Dedup by FILENAME (not full path): bundled pack exists in both
+                // build\bin\assets\crossover\ and source assets\crossover\ with identical
+                // names — without this the 530 pack shows twice.
+                std::wstring lowName = utils::ToLower(fd.cFileName);
                 bool dup=false;
-                for(auto& e: m_libraryFiles) if(utils::ToLower(e)==lowFull){ dup=true; break; }
+                for(auto& e: m_libraryFiles){
+                    std::wstring en = e;
+                    size_t pp = en.find_last_of(L"\\/");
+                    if(pp!=std::wstring::npos) en = en.substr(pp+1);
+                    if(utils::ToLower(en)==lowName){ dup=true; break; }
+                }
                 if(dup) continue;
                 m_libraryFiles.push_back(full);
                 std::wstring wname = fd.cFileName;
@@ -1828,6 +1836,31 @@ void ConfigWindow::RenderSettings()
     ImGui::TextColored(kMuted, "Changes apply instantly. Restart not needed.");
     ImGui::Separator();
     ImGui::Spacing();
+    ImGui::TextColored(kMuted, "HOTKEYS");
+    ImGui::Spacing();
+    ImGui::TextWrapped("F8: Toggle crosshair overlay on/off (global, works in-game). F7: Toggle main window <-> tray (global, works even when hidden - no relaunch needed).");
+    ImGui::TextColored(kMuted, "Close (X) hides to tray when 'Run in system tray' is on. F7 brings it back.");
+    ImGui::Separator();
+    ImGui::Spacing();
+    ImGui::TextColored(kMuted, "FPS COUNTER");
+    ImGui::Spacing();
+    if (ImGui::Checkbox("Show FPS counter on overlay", &m_cfg.showFps)) { ConfigManager::Save(m_cfg); if (m_overlay) m_overlay->SetConfig(m_cfg); }
+    ImGui::TextWrapped("External overlay FPS (no injection). Measures this overlay's present rate at the configured corner - useful as a display/VSync sanity check while in-game. For true in-engine FPS use the game's built-in counter.");
+    {
+        const char* corners[] = { "Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right" };
+        if (ImGui::Combo("FPS corner", &m_cfg.fpsCorner, corners, 4)) { ConfigManager::Save(m_cfg); if (m_overlay) m_overlay->SetConfig(m_cfg); }
+        auto fpsColEdit = [&](const char* label, COLORREF& col) {
+            float cf[3] = { GetRValue(col) / 255.0f, GetGValue(col) / 255.0f, GetBValue(col) / 255.0f };
+            if (ImGui::ColorEdit3(label, cf, ImGuiColorEditFlags_NoInputs)) {
+                col = RGB((int)(cf[0] * 255), (int)(cf[1] * 255), (int)(cf[2] * 255));
+                ConfigManager::Save(m_cfg); if (m_overlay) m_overlay->SetConfig(m_cfg);
+            }
+        };
+        fpsColEdit("FPS color", m_cfg.fpsColor);
+        if (ImGui::SliderInt("FPS font size", &m_cfg.fpsFontSize, 10, 48)) { ConfigManager::Save(m_cfg); if (m_overlay) m_overlay->SetConfig(m_cfg); }
+    }
+    ImGui::Separator();
+    ImGui::Spacing();
     ImGui::TextColored(kMuted, "UPDATES");
     ImGui::Text("Current version: %s", kVersion);
     ImGui::Checkbox("Auto-check on launch", &m_cfg.autoCheckUpdate);
@@ -1866,6 +1899,9 @@ void ConfigWindow::TriggerUpdateCheck(bool manual){
             if(!manual && rv.version==m_cfg.skippedVersion) return;
             m_pendingUpdate=rv;
             m_showUpdatePopup=true;
+            m_updateDownloading=false; m_updateDlDone=false; m_updateDlOk=false;
+            m_updateLaunched=false; m_updateDlError.clear(); m_updateDlPath.clear();
+            m_updateDlGot=0; m_updateDlTotal=0;
         } else {
             if(manual){
                 m_pendingUpdate=rv;
@@ -1892,22 +1928,98 @@ void ConfigWindow::RenderUpdatePopup(){
             ImGui::TextWrapped("Get it: %s", m_pendingUpdate.url.c_str());
         }
         ImGui::Spacing();
-        if(ImGui::Button("Update", ImVec2(180,28))){
-            std::string dl = m_pendingUpdate.url;
-            if(dl.empty()) dl = "https://github.com/Dopemodz420/DopesCrosshairTool/releases";
-            ShellExecuteA(nullptr,"open",dl.c_str(),nullptr,nullptr,SW_SHOWNORMAL);
-            m_showUpdatePopup=false;
+        if (m_updateDownloading) {
+            float frac = (m_updateDlTotal > 0) ? (float)((double)m_updateDlGot / (double)m_updateDlTotal) : 0.0f;
+            if (m_updateDlTotal > 0) {
+                char ov[64]; snprintf(ov, sizeof(ov), "%llu / %llu MB", m_updateDlGot / (1024 * 1024), m_updateDlTotal / (1024 * 1024));
+                ImGui::ProgressBar(frac, ImVec2(-1, 0), ov);
+            } else {
+                char ov[64]; snprintf(ov, sizeof(ov), "%llu MB downloaded...", m_updateDlGot / (1024 * 1024));
+                ImGui::ProgressBar(-1.0f * (float)(ImGui::GetTime() * 0.0 + 0.5), ImVec2(-1, 0), ov);
+            }
+            ImGui::TextColored(kMuted, "Downloading installer... do not close the app.");
+            if (!m_updateDlError.empty()) ImGui::TextColored(kDanger, "%s", m_updateDlError.c_str());
+        } else if (m_updateDlDone && m_updateDlOk && !m_updateLaunched) {
+            ImGui::TextColored(kGood, "Download complete - launching installer...");
+        } else {
+            if (!m_updateDlError.empty()) ImGui::TextColored(kDanger, "%s", m_updateDlError.c_str());
+            if (ImGui::Button("Update", ImVec2(180, 28))) {
+                StartInstallerDownload();
+            }
+        }
+        if (!m_updateDownloading) {
+            ImGui::SameLine();
+            if (ImGui::Button("Skip this version", ImVec2(140, 28))) {
+                m_cfg.skippedVersion = m_pendingUpdate.version;
+                ConfigManager::Save(m_cfg);
+                m_showUpdatePopup = false;
+            }
         }
         ImGui::SameLine();
-        if(ImGui::Button("Skip this version", ImVec2(140,28))){
-            m_cfg.skippedVersion=m_pendingUpdate.version;
-            ConfigManager::Save(m_cfg);
-            m_showUpdatePopup=false;
-        }
-        ImGui::SameLine();
-        if(ImGui::Button("Later", ImVec2(80,28))){ m_showUpdatePopup=false; }
+        if (!m_updateDownloading && ImGui::Button("Later", ImVec2(80, 28))) { m_showUpdatePopup = false; }
         ImGui::EndPopup();
     }
+    // Launch installer once after successful download (outside popup begin/end is fine)
+    if (m_updateDlDone && m_updateDlOk && !m_updateLaunched && !m_updateDlPath.empty()) {
+        m_updateLaunched = true;
+        ShellExecuteW(nullptr, L"open", m_updateDlPath.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        m_showUpdatePopup = false;
+        PostQuitMessage(0);
+    }
+}
+void ConfigWindow::StartInstallerDownload() {
+    // Resolve direct installer URL: prefer "installer" field, else "url" if it is an .exe link
+    std::string dl = m_pendingUpdate.installer;
+    auto endsWithExe = [](const std::string& s) {
+        if (s.size() < 4) return false;
+        std::string t = s;
+        // strip query string
+        size_t q = t.find('?'); if (q != std::string::npos) t = t.substr(0, q);
+        if (t.size() < 4) return false;
+        std::string e = t.substr(t.size() - 4);
+        for (auto& ch : e) ch = (char)tolower(ch);
+        return e == ".exe";
+    };
+    if (dl.empty() && endsWithExe(m_pendingUpdate.url)) dl = m_pendingUpdate.url;
+    if (dl.empty()) {
+        // No direct asset — fall back to opening the release page
+        std::string page = m_pendingUpdate.url;
+        if (page.empty()) page = "https://github.com/Dopemodz420/DopesCrosshairTool/releases";
+        ShellExecuteA(nullptr, "open", page.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        m_showUpdatePopup = false;
+        return;
+    }
+    // Dest: %TEMP%\DopesCrosshairTool-Setup-<version>.exe
+    wchar_t tmp[MAX_PATH]{};
+    DWORD n = GetTempPathW(MAX_PATH, tmp);
+    std::wstring dest = (n > 0) ? std::wstring(tmp) : L"C:\\Windows\\Temp\\";
+    std::string ver = m_pendingUpdate.version.empty() ? "latest" : m_pendingUpdate.version;
+    std::wstring wver;
+    { int nn = MultiByteToWideChar(CP_UTF8, 0, ver.c_str(), -1, nullptr, 0); wver.resize(nn - 1); MultiByteToWideChar(CP_UTF8, 0, ver.c_str(), -1, wver.data(), nn); }
+    dest += L"DopesCrosshairTool-Setup-" + wver + L".exe";
+    int nw = MultiByteToWideChar(CP_UTF8, 0, dl.c_str(), -1, nullptr, 0);
+    std::wstring wurl(nw - 1, 0);
+    MultiByteToWideChar(CP_UTF8, 0, dl.c_str(), -1, wurl.data(), nw);
+    m_updateDownloading = true;
+    m_updateDlDone = false;
+    m_updateDlOk = false;
+    m_updateLaunched = false;
+    m_updateDlError.clear();
+    m_updateDlPath.clear();
+    m_updateDlGot = 0;
+    m_updateDlTotal = 0;
+    DownloadFileAsync(wurl, dest,
+        [this, dest](bool ok, std::string err) {
+            m_updateDlDone = true;
+            m_updateDlOk = ok;
+            m_updateDownloading = false;
+            m_updateDlError = err;
+            if (ok) m_updateDlPath = dest;
+        },
+        [this](unsigned long long got, unsigned long long total) {
+            m_updateDlGot = got;
+            m_updateDlTotal = total;
+        });
 }
 void ConfigWindow::FlashActiveDisplay(){
     if(m_testFlashHwnd && IsWindow(m_testFlashHwnd)){ DestroyWindow(m_testFlashHwnd); m_testFlashHwnd=nullptr; }
@@ -2000,8 +2112,8 @@ void ConfigWindow::RenderInfo()
     ImGui::Separator();
     ImGui::Spacing();
     // Info text
-    ImGui::TextColored(kAccent, "ABOUT  -  v1.0.2");
-    ImGui::TextWrapped("DopesCrosshairTool v1.0.2 - external, non-injecting HUD overlay. Real Overlay mode draws above even exclusive fullscreen via DWM hardware overlay (like Xbox Game Bar), requiring Administrator - invisible to game / anti-cheat.");
+    ImGui::TextColored(kAccent, "ABOUT  -  v1.0.3");
+    ImGui::TextWrapped("DopesCrosshairTool v1.0.3 - external, non-injecting HUD overlay. Real Overlay mode draws above even exclusive fullscreen via DWM hardware overlay (like Xbox Game Bar), requiring Administrator - invisible to game / anti-cheat.");
     ImGui::Spacing();
     ImGui::TextColored(kGood, "THEME - Black / Gray / Green / Teal");
     ImGui::BulletText("Background: GeoCamoBlack.png tiled with animated Green/Teal marching outer border");
@@ -2061,7 +2173,7 @@ void ConfigWindow::RenderUI(HWND hwnd, bool& running)
     {
         EnsureTitleFont();
         bool isAdmin = m_cfg.IsElevated();
-        std::string title = std::string("DOPES CROSSHAIR - HUD Overlay v1.0.2") + (isAdmin ? " [ADMIN]" : "");
+        std::string title = std::string("DOPES CROSSHAIR - HUD Overlay v1.0.3") + (isAdmin ? " [ADMIN]" : "");
         ImFont* font = m_titleFont ? m_titleFont : ImGui::GetFont();
         float size = ImGui::GetFontSize() * 1.25f;
         ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -2112,7 +2224,7 @@ void ConfigWindow::RenderUI(HWND hwnd, bool& running)
     ImGui::SetCursorPosX(18.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10,14));
     ImGui::BeginChild("sidebar", ImVec2(kSidebarW, -72), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar);
-    const char* brand="DOPES HUD  v1.0.2";
+    const char* brand="DOPES HUD  v1.0.3";
     float bw = ImGui::CalcTextSize(brand).x;
     ImGui::SetCursorPosX((kSidebarW - bw)*0.5f);
     ImGui::TextColored(ImVec4(0.9f,0.9f,0.95f,1.0f), "%s", brand);

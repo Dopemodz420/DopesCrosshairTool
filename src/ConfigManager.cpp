@@ -242,6 +242,10 @@ bool ConfigManager::Load(AppConfig& out, const std::wstring& pathIn) {
     if (ExtractBool(json, "autoCheckUpdate", b)) out.autoCheckUpdate = b;
     if (ExtractString(json, "updateFeedUrl", s)) out.updateFeedUrl = Utf8ToW(s);
     if (ExtractString(json, "skippedVersion", s)) out.skippedVersion = s;
+    if (ExtractBool(json, "showFps", b)) out.showFps = b;
+    if (ExtractInt(json, "fpsCorner", v)) out.fpsCorner = std::clamp(v, 0, 3);
+    if (ExtractColor(json, "fpsColor", out.fpsColor)) {}
+    if (ExtractInt(json, "fpsFontSize", v)) out.fpsFontSize = std::clamp(v, 10, 48);
 
     // allowList: extract array entries "exeName": "..."
     // Simple: find "allowList" then iterate objects
@@ -369,6 +373,10 @@ bool ConfigManager::Save(const AppConfig& cfg, const std::wstring& pathIn) {
     ss << "  \"toggleOnSound\": " << cfg.toggleOnSound << ",\n";
     ss << "  \"toggleOffSound\": " << cfg.toggleOffSound << ",\n";
     ss << "  \"autoCheckUpdate\": " << (cfg.autoCheckUpdate ? "true":"false") << ",\n";
+    ss << "  \"showFps\": " << (cfg.showFps ? "true":"false") << ",\n";
+    ss << "  \"fpsCorner\": " << cfg.fpsCorner << ",\n";
+    ss << "  \"fpsColor\": \"" << WToUtf8(utils::ColorToString(cfg.fpsColor)) << "\",\n";
+    ss << "  \"fpsFontSize\": " << cfg.fpsFontSize << ",\n";
     ss << "  \"updateFeedUrl\": \"" << WToUtf8(cfg.updateFeedUrl) << "\",\n";
     {
         std::string esc=cfg.skippedVersion; std::string e; for(char c:esc) if(c=='"') e+="\\\""; else if(c=='\\') e+="\\\\"; else e+=c;

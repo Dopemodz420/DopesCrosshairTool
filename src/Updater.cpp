@@ -110,19 +110,82 @@ bool FetchRemoteVersion(const std::wstring& url, RemoteVersion& out, std::string
         return false;
     }
     // Parse json
-    std::string ver, u, notes; bool mand=false;
+    std::string ver, u, inst, notes; bool mand=false;
     if(!ExtractJsonString(data,"version",ver)){
         if(err) *err="Missing version in JSON";
         return false;
     }
     ExtractJsonString(data,"url",u);
+    ExtractJsonString(data,"installer",inst);
     ExtractJsonString(data,"notes",notes);
     ExtractJsonBool(data,"mandatory",mand);
     out.version=Trim(ver);
     out.url=Trim(u);
+    out.installer=Trim(inst);
     out.notes=Trim(notes);
     out.mandatory=mand;
     return true;
+}
+
+void DownloadFileAsync(const std::wstring& url, const std::wstring& destPath,
+    std::function<void(bool ok, std::string err)> done,
+    std::function<void(unsigned long long downloaded, unsigned long long total)> progress) {
+    std::thread([url, destPath, done, progress] {
+        HINTERNET hNet = InternetOpenW(L"DopesCrosshairTool-Updater/1.0", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+        if (!hNet) { if (done) done(false, "InternetOpen failed"); return; }
+        DWORD timeout = 15000;
+        InternetSetOptionW(hNet, INTERNET_OPTION_CONNECT_TIMEOUT, &timeout, sizeof(timeout));
+        InternetSetOptionW(hNet, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeout, sizeof(timeout));
+        HINTERNET hUrl = InternetOpenUrlW(hNet, url.c_str(), NULL, 0,
+            INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE | INTERNET_FLAG_NO_UI, 0);
+        if (!hUrl) {
+            std::string e = "Download failed: " + std::to_string(GetLastError());
+            InternetCloseHandle(hNet);
+            if (done) done(false, e);
+            return;
+        }
+        // Try content length for progress
+        unsigned long long total = 0;
+        {
+            wchar_t lenBuf[64]{}; DWORD lenSize = sizeof(lenBuf);
+            if (HttpQueryInfoW(hUrl, HTTP_QUERY_CONTENT_LENGTH, lenBuf, &lenSize, NULL)) {
+                try { total = std::stoull(lenBuf); } catch (...) { total = 0; }
+            }
+        }
+        HANDLE hFile = CreateFileW(destPath.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (hFile == INVALID_HANDLE_VALUE) {
+            InternetCloseHandle(hUrl); InternetCloseHandle(hNet);
+            if (done) done(false, "Cannot write temp file");
+            return;
+        }
+        char buf[32768]; DWORD read = 0;
+        unsigned long long downloaded = 0;
+        bool netOk = true;
+        std::string netErr;
+        while (true) {
+            BOOL r = InternetReadFile(hUrl, buf, sizeof(buf), &read);
+            if (!r) { netOk = false; netErr = "Download interrupted: " + std::to_string(GetLastError()); break; }
+            if (read == 0) break;
+            DWORD written = 0;
+            if (!WriteFile(hFile, buf, read, &written, nullptr) || written != read) {
+                netOk = false; netErr = "Cannot write temp file (disk?)"; break;
+            }
+            downloaded += read;
+            if (progress) progress(downloaded, total);
+            if (downloaded > 512ULL * 1024 * 1024) { netOk = false; netErr = "File too large, aborted"; break; }
+        }
+        CloseHandle(hFile);
+        InternetCloseHandle(hUrl);
+        InternetCloseHandle(hNet);
+        if (!netOk) { DeleteFileW(destPath.c_str()); if (done) done(false, netErr); return; }
+        if (downloaded < 1024 * 1024) {
+            // Likely an HTML error page, not the installer
+            DeleteFileW(destPath.c_str());
+            if (done) done(false, "Download too small — release asset not published yet");
+            return;
+        }
+        if (done) done(true, "");
+    }).detach();
 }
 
 void CheckForUpdateAsync(const std::wstring& feedUrl, std::function<void(bool, RemoteVersion, std::string)> cb){

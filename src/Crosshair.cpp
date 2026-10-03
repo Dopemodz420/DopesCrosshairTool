@@ -127,6 +127,10 @@ void AppConfig::SetDefaults() {
     autoCheckUpdate = true;
     updateFeedUrl.clear();
     skippedVersion.clear();
+    showFps = false;
+    fpsCorner = 1;
+    fpsColor = RGB(0, 255, 128);
+    fpsFontSize = 18;
 }
 
 } // namespace dopes

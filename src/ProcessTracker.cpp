@@ -114,6 +114,49 @@ std::vector<std::wstring> ProcessTracker::EnumerateRunningExes() {
     return out;
 }
 
+static BOOL CALLBACK TaskbarEnumCb(HWND hwnd, LPARAM lp) {
+    auto* out = (std::vector<ProcessTracker::TaskbarApp>*)lp;
+    if (out->size() >= 64) return FALSE;
+    if (!IsWindowVisible(hwnd)) return TRUE;
+    if (GetWindow(hwnd, GW_OWNER) != nullptr) return TRUE; // owned popups/dialogs are not taskbar apps
+    LONG ex = GetWindowLongW(hwnd, GWL_EXSTYLE);
+    if (ex & WS_EX_TOOLWINDOW) return TRUE;
+    LONG style = GetWindowLongW(hwnd, GWL_STYLE);
+    if (!(style & WS_CAPTION)) {
+        // Captionless fullscreen (exclusive/borderless game) still counts if it covers a monitor
+        RECT wr{}; GetWindowRect(hwnd, &wr);
+        HMONITOR mon = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi{}; mi.cbSize = sizeof(mi);
+        bool covers = false;
+        if (GetMonitorInfoW(mon, &mi)) {
+            RECT mr = mi.rcMonitor;
+            covers = (wr.left <= mr.left && wr.top <= mr.top && wr.right >= mr.right && wr.bottom >= mr.bottom);
+        }
+        if (!covers) return TRUE;
+    }
+    wchar_t title[256]{};
+    GetWindowTextW(hwnd, title, 256);
+    std::wstring exe = ProcessTracker::GetExeNameFromHwnd(hwnd);
+    if (exe.empty()) return TRUE;
+    std::wstring lowExe = utils::ToLower(exe);
+    if (lowExe == L"dopescrosshairtool.exe") return TRUE; // never whitelist ourselves
+    if (lowExe == L"explorer.exe" && wcslen(title) == 0) return TRUE;
+    std::wstring t = (wcslen(title) > 0) ? title : L"(fullscreen window)";
+    for (auto& e : *out) if (e.exe == lowExe && e.title == t) return TRUE;
+    out->push_back({ lowExe, t });
+    return TRUE;
+}
+
+std::vector<ProcessTracker::TaskbarApp> ProcessTracker::EnumerateTaskbarApps() {
+    std::vector<TaskbarApp> out;
+    EnumWindows(TaskbarEnumCb, (LPARAM)&out);
+    std::sort(out.begin(), out.end(), [](const TaskbarApp& a, const TaskbarApp& b) {
+        if (a.exe != b.exe) return a.exe < b.exe;
+        return a.title < b.title;
+    });
+    return out;
+}
+
 bool ProcessTracker::GetTargetCenter(const AppConfig& cfg, POINT& outCenter, RECT& outTargetRect, bool& outIsFullscreen) {
     outIsFullscreen = false;
     if (cfg.followTargetWindow && cfg.onlyWhenForeground) {

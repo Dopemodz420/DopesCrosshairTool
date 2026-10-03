@@ -21,6 +21,11 @@ public:
     // Enumerate running processes exe names (for dropdown)
     static std::vector<std::wstring> EnumerateRunningExes();
 
+    // Visible top-level windows (taskbar-like): exe + window title, so the user
+    // can whitelist a game without clicking into it first.
+    struct TaskbarApp { std::wstring exe; std::wstring title; };
+    static std::vector<TaskbarApp> EnumerateTaskbarApps();
+
     // Helper: find window rect for centering
     static bool GetTargetCenter(const AppConfig& cfg, POINT& outCenter, RECT& outTargetRect, bool& outIsFullscreen);
 };

@@ -2,7 +2,7 @@
 ; Allows user to choose install dir, creates Start Menu + Desktop shortcuts, uninstaller
 
 #define MyAppName "Dopes Crosshair Tool"
-#define MyAppVersion "1.0.3"
+#define MyAppVersion "1.0.4"
 #define MyAppPublisher "DopesAIDevelopment"
 #define MyAppURL "https://github.com/Dopemodz420/DopesCrosshairTool.git"
 #define MyAppExeName "DopesCrosshairTool.exe"
@@ -18,7 +18,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 LicenseFile=LicenseAgreement.txt
 OutputDir=.
-OutputBaseFilename=DopesCrosshairTool-Setup-1.0.3
+OutputBaseFilename=DopesCrosshairTool-Setup-1.0.4
 SetupIconFile=..\resources\app.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma

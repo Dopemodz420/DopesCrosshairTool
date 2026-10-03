@@ -10,6 +10,7 @@
 #include "Crosshair.h"
 #include "CrosshairRenderer.h"
 #include "OverlayWindow.h"
+#include "ProcessTracker.h"
 #include "Updater.h"
 #include "Version.h"
 
@@ -77,6 +78,9 @@ private:
     std::vector<std::wstring> m_processes;
     int m_selectedProcess = 0;
     char m_addExeBuf[128] = {0};
+    // Open taskbar windows (no second monitor needed to whitelist)
+    std::vector<ProcessTracker::TaskbarApp> m_taskbarApps;
+    void RefreshTaskbarApps();
 
     // Preview texture
     ID3D11ShaderResourceView* m_previewSRV = nullptr;

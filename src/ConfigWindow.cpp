@@ -123,6 +123,12 @@ void ConfigWindow::RefreshProcessList()
 {
     m_processes = ProcessTracker::EnumerateRunningExes();
     if (m_selectedProcess >= (int)m_processes.size()) m_selectedProcess = 0;
+    RefreshTaskbarApps();
+}
+
+void ConfigWindow::RefreshTaskbarApps()
+{
+    m_taskbarApps = ProcessTracker::EnumerateTaskbarApps();
 }
 
 void ConfigWindow::HandleDropFiles(HDROP hDrop)
@@ -1446,6 +1452,47 @@ void ConfigWindow::RenderAllowList()
         ImGui::TextUnformatted(s.c_str());
     }
     CardEnd();
+    ImGui::Spacing();
+    // Open windows picker: whitelist a game straight from its taskbar window,
+    // no second monitor and no clicking into the game needed.
+    CardBegin("openWinCard", ImVec2(0, 0));
+    ImGui::TextColored(kMuted, "OPEN WINDOWS (click ADD - no need to focus the game)");
+    ImGui::Spacing();
+    {
+        static DWORD lastTaskRefresh = 0;
+        DWORD now = GetTickCount();
+        if (m_taskbarApps.empty() || (now - lastTaskRefresh) > 3000) {
+            RefreshTaskbarApps();
+            lastTaskRefresh = now;
+        }
+    }
+    if (ImGui::Button("REFRESH OPEN WINDOWS", ImVec2(-1, 24))) { RefreshTaskbarApps(); RefreshProcessList(); }
+    ImGui::Spacing();
+    if (m_taskbarApps.empty()) {
+        ImGui::TextColored(kMuted, "(no open windows found - launch the game windowed/borderless first)");
+    } else if (ImGui::BeginListBox("##openwinbox", ImVec2(-1, 150))) {
+        for (size_t i = 0; i < m_taskbarApps.size(); ++i) {
+            auto& tba = m_taskbarApps[i];
+            std::string exeA = utils::WToUtf8(tba.exe);
+            std::string titleA = utils::WToUtf8(tba.title);
+            if (titleA.size() > 48) titleA = titleA.substr(0, 48) + "...";
+            std::string row = titleA + "  [" + exeA + "]";
+            ImGui::TextUnformatted(row.c_str());
+            ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 70.0f);
+            std::string btnId = "ADD##taskbar" + std::to_string(i);
+            if (ImGui::SmallButton(btnId.c_str())) {
+                std::wstring w = utils::ToLower(utils::Trim(tba.exe));
+                if (!w.empty()) {
+                    if (w.find(L".exe") == std::wstring::npos) w += L".exe";
+                    bool exists = false;
+                    for (auto& e : m_cfg.allowList) if (utils::ToLower(e.exeName) == w) exists = true;
+                    if (!exists) { m_cfg.allowList.push_back({ w, true }); ConfigManager::Save(m_cfg); if (m_overlay) m_overlay->SetConfig(m_cfg); }
+                }
+            }
+        }
+        ImGui::EndListBox();
+    }
+    CardEnd();
     CardEnd(); // allowOuter
 }
 
@@ -1877,8 +1924,6 @@ void ConfigWindow::RenderSettings()
     ImGui::TextColored(kMuted, "Click Check now -> Update to grab the latest release.");
     CardEnd();
 
-    // Update popup
-    RenderUpdatePopup();
     // Also need to handle binding polling outside (already in button)
     if(IsBindingVisibility || IsBindingLeanLeft || IsBindingLeanRight || IsBindingSwitch){
         // If ESC pressed cancel
@@ -2112,8 +2157,8 @@ void ConfigWindow::RenderInfo()
     ImGui::Separator();
     ImGui::Spacing();
     // Info text
-    ImGui::TextColored(kAccent, "ABOUT  -  v1.0.3");
-    ImGui::TextWrapped("DopesCrosshairTool v1.0.3 - external, non-injecting HUD overlay. Real Overlay mode draws above even exclusive fullscreen via DWM hardware overlay (like Xbox Game Bar), requiring Administrator - invisible to game / anti-cheat.");
+    ImGui::TextColored(kAccent, "ABOUT  -  v1.0.4");
+    ImGui::TextWrapped("DopesCrosshairTool v1.0.4 - external, non-injecting HUD overlay. Real Overlay mode draws above even exclusive fullscreen via DWM hardware overlay (like Xbox Game Bar), requiring Administrator - invisible to game / anti-cheat.");
     ImGui::Spacing();
     ImGui::TextColored(kGood, "THEME - Black / Gray / Green / Teal");
     ImGui::BulletText("Background: GeoCamoBlack.png tiled with animated Green/Teal marching outer border");
@@ -2173,7 +2218,7 @@ void ConfigWindow::RenderUI(HWND hwnd, bool& running)
     {
         EnsureTitleFont();
         bool isAdmin = m_cfg.IsElevated();
-        std::string title = std::string("DOPES CROSSHAIR - HUD Overlay v1.0.3") + (isAdmin ? " [ADMIN]" : "");
+        std::string title = std::string("DOPES CROSSHAIR - HUD Overlay v1.0.4") + (isAdmin ? " [ADMIN]" : "");
         ImFont* font = m_titleFont ? m_titleFont : ImGui::GetFont();
         float size = ImGui::GetFontSize() * 1.25f;
         ImVec2 pos = ImGui::GetCursorScreenPos();
@@ -2224,7 +2269,7 @@ void ConfigWindow::RenderUI(HWND hwnd, bool& running)
     ImGui::SetCursorPosX(18.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10,14));
     ImGui::BeginChild("sidebar", ImVec2(kSidebarW, -72), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar);
-    const char* brand="DOPES HUD  v1.0.3";
+    const char* brand="DOPES HUD  v1.0.4";
     float bw = ImGui::CalcTextSize(brand).x;
     ImGui::SetCursorPosX((kSidebarW - bw)*0.5f);
     ImGui::TextColored(ImVec4(0.9f,0.9f,0.95f,1.0f), "%s", brand);
@@ -2299,6 +2344,9 @@ void ConfigWindow::RenderUI(HWND hwnd, bool& running)
         if(m_overlay) m_overlay->SetConfig(m_cfg);
     }
     EndPcbWindow();
+    // Update popup lives at top level so it appears on startup on ANY page,
+    // not only when Settings is open. Pops out over the main panel.
+    RenderUpdatePopup();
     // Render editor on top
     RenderPixelEditor();
 }

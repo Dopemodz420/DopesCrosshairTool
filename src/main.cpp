@@ -411,7 +411,7 @@ int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE, LPSTR lpCmdLine, int)
     if (!wc.hIconSm) wc.hIconSm = wc.hIcon;
     RegisterClassExW(&wc);
 
-    HWND hwnd = CreateWindowExW(WS_EX_APPWINDOW, wc.lpszClassName, _T("Dopes Crosshair Tool  —  Crosshair HUD Overlay v1.0.3"), WS_POPUP | WS_MINIMIZEBOX, 100, 100, 1120, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    HWND hwnd = CreateWindowExW(WS_EX_APPWINDOW, wc.lpszClassName, _T("Dopes Crosshair Tool  —  Crosshair HUD Overlay v1.0.4"), WS_POPUP | WS_MINIMIZEBOX, 100, 100, 1120, 800, nullptr, nullptr, wc.hInstance, nullptr);
     if (!hwnd)
     {
         UnregisterClassW(wc.lpszClassName, wc.hInstance);
